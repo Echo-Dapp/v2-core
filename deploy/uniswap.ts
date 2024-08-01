@@ -1,23 +1,29 @@
-import 'dotenv/config'
-import { Contract, ContractFactory, JsonRpcProvider, Wallet } from 'ethers'
-import EchoSwapFactory from '../build/EchoSwapFactory.json'
-
-const provider = new JsonRpcProvider('https://open-campus-codex-sepolia.drpc.org')
-
-const wallet = new Wallet(process.env.WALLET_PVT_KEY || '0x', provider)
+import "dotenv/config";
+import { ethers } from "hardhat";
+import { JsonRpcProvider } from "ethers";
+import { writeFileSync, readFileSync } from "fs";
 
 async function main() {
-  const factory = new ContractFactory(EchoSwapFactory.abi, EchoSwapFactory.bytecode, wallet)
-  const deployedContract = await factory.deploy()
+  if (!process.env.DEPLOYER_PRIVATE_KEY) throw "Provide deployer private key";
 
-  await deployedContract.waitForDeployment()
+  const provider = new JsonRpcProvider(
+    "https://open-campus-codex-sepolia.drpc.org"
+  );
 
-  const deployedAddress = await deployedContract.getAddress()
+  const [deployer] = await ethers.getSigners();
 
-  console.log('deployed to : ', deployedAddress)
+  console.log("Deployer : ", deployer.address);
 
-  const contract = new Contract(deployedAddress, EchoSwapFactory.abi, wallet)
+  const EchoSwapFactory = await ethers.getContractFactory("EchoSwapFactory");
+  const echoSwap = await EchoSwapFactory.deploy(deployer.address);
+  await echoSwap.waitForDeployment();
 
+  console.log("EchoSwapFactory : ", await echoSwap.getAddress());
 }
 
 main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
